@@ -10,8 +10,8 @@
                 listOfStrings.Add("strings");
             }
 
-            Thread.Sleep(30);
-            return await Task.FromResult(listOfStrings);
+            Thread.Sleep(300);
+            return listOfStrings;
         }
     }
 }

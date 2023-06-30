@@ -17,30 +17,32 @@ namespace DataFlow.Example.Features
 
         public async Task<bool> ProcessAsync(int amount, CancellationToken cancellationToken)
         {
-            var semaphore = new SemaphoreSlim(4);
-            var data = await _fakeRepository.GetDataAsync(amount, cancellationToken);
-            var tasks = new List<Task>();
-            foreach (var item in data)
+            using (var semaphore = new SemaphoreSlim(Environment.ProcessorCount))
             {
-                tasks.Add(Task.Run(async () =>
+                var data = await _fakeRepository.GetDataAsync(amount, cancellationToken);
+                var tasks = new List<Task>();
+                foreach (var item in data)
                 {
-                    try
+                    tasks.Add(Task.Run(async () =>
                     {
-                        await semaphore.WaitAsync();
-                        var transformedData = await _fakeTransformer.TransformDataAsync(item, cancellationToken);
-                        foreach (var saveItem in transformedData)
+                        try
                         {
-                            await _fakeRepository.SaveDataAsync(saveItem, cancellationToken);
+                            await semaphore.WaitAsync();
+                            var transformedData = await _fakeTransformer.TransformDataAsync(item, cancellationToken);
+                            foreach (var saveItem in transformedData)
+                            {
+                                await _fakeRepository.SaveDataAsync(saveItem, cancellationToken);
+                            }
                         }
-                    }
-                    finally
-                    {
-                        semaphore.Release();
-                    }
-                }));
+                        finally
+                        {
+                            semaphore.Release();
+                        }
+                    }));
+                }
+                await Task.WhenAll(tasks);
+                return true;
             }
-            await Task.WhenAll(tasks);
-            return await Task.FromResult(true);
         }
     }
 }

@@ -8,37 +8,41 @@ namespace DataFlow.Example.Features
         private readonly IFakeRepository _fakeRepository;
         private readonly IFakeTransformer _fakeTransformer;
 
+        private readonly TransformManyBlock<int, int> _getDataBlock;
+        private readonly TransformManyBlock<int, string> _transformDataBlock;
+        private readonly ActionBlock<string> _saveDataBlock;
+
         public DataFlowProcess(
             IFakeRepository fakeRepository,
             IFakeTransformer fakeTransformer)
         {
             _fakeRepository = fakeRepository;
             _fakeTransformer = fakeTransformer;
+
+            var options = new ExecutionDataflowBlockOptions()
+            {
+                MaxDegreeOfParallelism = Environment.ProcessorCount
+            };
+
+            _getDataBlock = new TransformManyBlock<int, int>((amount) => _fakeRepository.GetDataAsync(amount, default), options);
+            _transformDataBlock = new TransformManyBlock<int, string>((amount) => _fakeTransformer.TransformDataAsync(amount, default), options);
+            _saveDataBlock = new ActionBlock<string>((input) => _fakeRepository.SaveDataAsync(input, default), options);
+
+            DataflowLinkOptions linkOptions = new DataflowLinkOptions() { PropagateCompletion = true };
+
+            _getDataBlock.LinkTo(_transformDataBlock, linkOptions);
+            _transformDataBlock.LinkTo(_saveDataBlock, linkOptions);
         }
 
         public async Task<bool> ProcessAsync(int amount, CancellationToken cancellationToken)
         {
-            var options = new ExecutionDataflowBlockOptions()
-            {
-                MaxDegreeOfParallelism = 4,
-            };
+            await _getDataBlock.SendAsync(amount, cancellationToken);
 
-            var getDataBlock = new TransformManyBlock<int, int>((amount) => _fakeRepository.GetDataAsync(amount, cancellationToken), options);
-            var transformDataBlock = new TransformManyBlock<int, string>((amount) => _fakeTransformer.TransformDataAsync(amount, cancellationToken), options);
-            var saveDataBlock = new ActionBlock<string>((input) => _fakeRepository.SaveDataAsync(input, cancellationToken), options);
+            _getDataBlock.Complete();
 
-            DataflowLinkOptions linkOptions = new DataflowLinkOptions() {  PropagateCompletion = true };
+            await _saveDataBlock.Completion;
 
-            getDataBlock.LinkTo(transformDataBlock, linkOptions);
-            transformDataBlock.LinkTo(saveDataBlock, linkOptions);
-
-            await getDataBlock.SendAsync(amount, cancellationToken);
-
-            getDataBlock.Complete();
-
-            await saveDataBlock.Completion;
-
-            return await Task.FromResult(true);
+            return true;
         }
     }
 }

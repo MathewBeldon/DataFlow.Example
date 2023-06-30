@@ -27,7 +27,7 @@ namespace DataFlow.Example.Features
                 }
             }
 
-            return await Task.FromResult(true);
+            return true;
         }
     }
 }
