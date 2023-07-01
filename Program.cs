@@ -10,6 +10,8 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddScoped<IFakeRepository,  FakeRepository>();
 builder.Services.AddScoped<IFakeTransformer, FakeTransformer>();
+builder.Services.AddScoped<IFakeTelemetry, FakeTelemetry>();
+
 
 
 var app = builder.Build();

@@ -1,7 +1,6 @@
 using DataFlow.Example.Features;
 using DataFlow.Example.Services;
 using Microsoft.AspNetCore.Mvc;
-using System.Reactive.Linq;
 
 namespace DataFlow.Example.Controllers
 {
@@ -11,21 +10,23 @@ namespace DataFlow.Example.Controllers
     {
         private readonly SemaphoreProcess _semaphoreProcess;
         private readonly SingleProcess _singleProcess;
-        private readonly DataFlowProcess _dataflowProcess;
+        private DataFlowProcess _dataflowProcess;
 
         public ParallelController(
             IFakeRepository fakeRepository,
-            IFakeTransformer fakeTransformer)
+            IFakeTransformer fakeTransformer,
+            IFakeTelemetry fakeTelemetry)
         {
-            _semaphoreProcess = new SemaphoreProcess(fakeRepository, fakeTransformer);
+            _semaphoreProcess = new SemaphoreProcess(fakeRepository, fakeTransformer, fakeTelemetry);
             _singleProcess = new SingleProcess(fakeRepository, fakeTransformer);
-            _dataflowProcess = new DataFlowProcess(fakeRepository, fakeTransformer);
+            _dataflowProcess = new DataFlowProcess(fakeRepository, fakeTransformer, fakeTelemetry);
         }
 
         [HttpGet("dataflow/{amount}")]
-        public async Task<IActionResult> StartDataflow(int amount)
+        public IActionResult StartDataflow(int amount)
         {
-            var response = await _dataflowProcess.ProcessAsync(amount, CancellationToken.None);
+
+            var response = _dataflowProcess.ProcessAsync(amount, CancellationToken.None);
 
             return Ok(response);
         }

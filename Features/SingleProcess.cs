@@ -15,19 +15,20 @@ namespace DataFlow.Example.Features
             _fakeTransformer = fakeTransformer;
         }
 
-        public async Task<bool> ProcessAsync(int amount, CancellationToken cancellationToken)
+        public async Task<IEnumerable<string>> ProcessAsync(int amount, CancellationToken cancellationToken)
         {
+            var primaryKeys = new List<string>();
             var data = await _fakeRepository.GetDataAsync(amount, cancellationToken);
             foreach (var item in data)
             {
                 var transformedData = await _fakeTransformer.TransformDataAsync(item, cancellationToken);
                 foreach (var saveItem in transformedData)
                 {
-                    await _fakeRepository.SaveDataAsync(saveItem, cancellationToken);
+                    primaryKeys.Add(await _fakeRepository.SaveDataAsync(saveItem, cancellationToken));
                 }
             }
 
-            return true;
+            return primaryKeys;
         }
     }
 }

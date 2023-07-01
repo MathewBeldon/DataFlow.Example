@@ -2,16 +2,16 @@
 {
     public sealed class FakeTransformer : IFakeTransformer
     {
-        public async Task<IEnumerable<string>> TransformDataAsync(int number, CancellationToken cancellationToken)
+        public Task<IEnumerable<string>> TransformDataAsync(int number, CancellationToken cancellationToken)
         {
             var listOfStrings = new List<string>();
-            for (int i = 0; i < number; i++)
+            for (int i = 0; i < 10; i++)
             {
                 listOfStrings.Add("strings");
             }
 
-            Thread.Sleep(300);
-            return listOfStrings;
+            Thread.Sleep(30);
+            return Task.FromResult((IEnumerable<string>)listOfStrings);
         }
     }
 }
