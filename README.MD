@@ -4,82 +4,54 @@
 
  There are various approaches to process data efficiently, each with its own trade-offs. In this demo, I have created three different strategies: TPL Dataflow, which utilizes a network of concurrently executing blocks; Semaphore-based control, which simply limits the number of tasks running in parallel; and Single-threaded processing, which executes tasks sequentially without any concurrency.
 
-### Dataflow
+### Dataflow (TPL Dataflow)
 
-* **Concurrency Model:** Dataflow employs a message-passing model where data moves through a network of linked blocks, and each block can process data concurrently up to a defined limit.
-* **Composition:** Easy to create complex processing pipelines by linking multiple blocks. This provides clear separation of concerns for different stages of processing.
-* **Scalability:** Can be highly scalable and can efficiently utilize resources, especially for I/O-bound operations.
-* **Control:** Provides fine-grained control over how data moves through the blocks and how concurrency is managed.
-* **Use Case:** Well-suited for scenarios where there are multiple stages of processing and there is a need for efficient management of resources.
+Task Parallel Library (TPL) Dataflow is ideal for building high-performance, data-driven applications. This approach constructs a processing pipeline using different blocks (like TransformManyBlock, TransformBlock, BroadcastBlock, etc.), each handling a specific type of processing. The blocks are linked, creating a complex data processing pipeline. Execution options are used to control concurrency levels, with the MaxDegreeOfParallelism property set to `Environment.ProcessorCount` for certain blocks (simulated CPU processes), allowing this many concurrent operations. Other blocks are configured to have an unbounded degree of parallelism (simulated I/O tasks). The model ensures that the completion status and exceptions are propagated through the pipeline.
 
 ### Semaphore
 
-* **Concurrency Model:** Uses semaphore to limit the number of concurrent tasks. Multiple tasks can be run in parallel but the number of executing tasks is capped.
-* **Composition:** The logic is often written inline and can be less modular compared to Dataflow.
-* **Scalability:** Scalability is good but requires manual management compared to the automatic handling by Dataflow.
-* **Control:** Provides control over concurrency, but less control over data flow compared to Dataflow.
-* **Use Case:** Suited for scenarios where you want to limit the number of concurrent tasks to prevent resource contention, but do not necessarily need the structured pipeline that Dataflow offers.
+Semaphores are synchronization primitives that maintain a count representing the number of allowed accesses to a resource. This approach uses a SemaphoreSlim object with an initial count of `Environment.ProcessorCount`(for simulated CPU processes, simulated I/O tasks are ran all at once), allowing up to this many concurrent operations. The tasks must acquire the semaphore before processing and release it afterward.
 
-### Single-threaded processing
+### Sequential Processing with Asynchronous Tasks
 
-* **Concurrency Model:** Processes tasks one at a time on a single thread.
-* **Composition:** Like the Semaphore approach, logic is usually written inline.
-* **Scalability:** Not scalable. Processing time increases linearly with the number of tasks.
-* **Control:** Simple control, as there is no concurrency or parallelism.
-* **Use Case:** Good for simple scenarios where the data processing is not resource-intensive, or where concurrency and parallelism would not offer substantial benefits. Also, easier to debug.
+This approach performs processing sequentially but leverages asynchronous tasks to prevent blocking. The method fetches, transforms, saves, and posts telemetry data one item at a time. While tasks are asynchronous, they are executed sequentially for each item.
 
 ## K6 Load Testing
 
-This load testing was performed with K6 under the scenario of 10 max Virtual Users (VUs) and a maximum duration of 1 minute 30 seconds, including a graceful stop of 30 seconds. Three different processing strategies were evaluated: Single Process, Semaphore Process, and Dataflow Process. The evaluation measures their performance in handling HTTP requests.
+These results represent the performance of three different processing approaches: Dataflow, Semaphore, and Sequential Processing with Asynchronous Tasks. Each approach is tested with a load script for 1 minute and 10 virtual users (VUs).
 
-### Single Process
+### Dataflow (loadTestDataflowProcess.js):
+* Total of 1557 iterations completed.
+* 100% of HTTP requests received status code 200, indicating success.
+* The average request duration was around 193 milliseconds.
+* Data received at a rate of approximately 108 kB/s.
+* Average iteration duration was around 386 milliseconds.
 
-* **Status:** 100% success rate (200 OK)
-* **Data Received:** 32 kB
-* **Data Sent:** 15 kB
-* **Number of HTTP Requests:** 140
-* **Average Request Duration:** 4.77 seconds
-* **Average Iteration Duration:** 9.55 seconds
-* **Throughput:** Approximately 2.09 requests/second
-* **Number of Iterations:** 70
-* **VUs:** 10
+### Semaphore (loadTestSemaphoreProcess.js):
+* Total of 1512 iterations completed.
+* 100% of HTTP requests received status code 200, indicating success.
+* The average request duration was around 199 milliseconds.
+* Data received at a rate of approximately 104 kB/s.
+* Average iteration duration was around 399 milliseconds.
 
-### Semaphore Process
-
-* **Status:** 100% success rate (200 OK)
-* **Data Received:** 91 kB
-* **Data Sent:** 50 kB
-* **Number of HTTP Requests:** 620
-* **Average Request Duration:** 985.12 milliseconds
-* **Average Iteration Duration:** 1.97 seconds
-* **Throughput:** Approximately 10.15 requests/second
-* **Number of Iterations:** 310
-* **VUs:** 10
-
-### Dataflow Process
-
-* **Status:** 100% success rate (200 OK)
-* **Data Received:** 181 kB
-* **Data Sent:** 94 kB
-* **Number of HTTP Requests:** 1260
-* **Average Request Duration:** 478.04 milliseconds
-* **Average Iteration Duration:** 956.44 milliseconds
-* **Throughput:** Approximately 20.83 requests/second
-* **Number of Iterations:** 630
-* **VUs:** 10
-
-Comparing the three processing strategies, it is clear that the Dataflow Process has the highest throughput, processing requests more than twice as fast as the Semaphore Process, and ten times faster than the Single Process. 
+### Sequential Processing with Asynchronous Tasks (loadTestSingleProcess.js):
+* Total of 30 iterations completed.
+* 100% of HTTP requests received status code 200, indicating success.
+* The average request duration was considerably higher, around 13.45 seconds.
+* Data received at a rate of approximately 1.7 kB/s.
+* Average iteration duration was around 26.91 seconds.
 
 ## Gantt Diagrams
 
 The following diagrams illustrate three different approaches to processing data: a single-threaded process, a semaphore-controlled process that limits concurrency to 4 concurrent tasks, and a dataflow process where each block is allowed to process up to 4 tasks concurrently. Each approach executes a set process in which it:
-1. retreives *n* amount of data (130ms simulated I/O per req(1))
-2. transforms that data into *n*\*10 items (300ms simulated CPU per req(*n*))
-3. saves those items (30ms simulated I/O per req(*n*\*10))
+1. retreives *n* amount of data (70ms simulated I/O)
+2. transforms that data into *n*\*2 items (30ms simulated CPU per req(*n*))
+3. saves those items and return an id (70ms simulated I/O per req(*n*\*2))
+4. post the id as telemetry data (50ms simulated I/O per req(*n*\*2)) (fire and forget for dataflow and semaphore)
 
 ```mermaid
     gantt
-        title Single process (10)
+        title Single process (20)
         dateFormat x
         axisFormat %L
         section Single
@@ -188,7 +160,7 @@ The following diagrams illustrate three different approaches to processing data:
 
 ```mermaid
     gantt
-        title Semaphore process (10)
+        title Semaphore process (20)
         dateFormat x
         axisFormat %L
         section Semaphore
@@ -281,7 +253,7 @@ The following diagrams illustrate three different approaches to processing data:
 
 ```mermaid
     gantt
-        title Dataflow process (10)
+        title Dataflow process (20)
         dateFormat x
         axisFormat %L
         section Dataflow

@@ -18,7 +18,7 @@ namespace DataFlow.Example.Controllers
             IFakeTelemetry fakeTelemetry)
         {
             _semaphoreProcess = new SemaphoreProcess(fakeRepository, fakeTransformer, fakeTelemetry);
-            _singleProcess = new SingleProcess(fakeRepository, fakeTransformer);
+            _singleProcess = new SingleProcess(fakeRepository, fakeTransformer, fakeTelemetry);
             _dataflowProcess = new DataFlowProcess(fakeRepository, fakeTransformer, fakeTelemetry);
         }
 

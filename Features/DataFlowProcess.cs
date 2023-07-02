@@ -13,7 +13,7 @@ namespace DataFlow.Example.Features
         private readonly ExecutionDataflowBlockOptions _dataflowOptionsLimited;
         private readonly ExecutionDataflowBlockOptions _dataflowOptionsUnlimited;
 
-        private readonly DataflowLinkOptions _dateflowLinkOptions;
+        private readonly DataflowLinkOptions _dataflowLinkOptions;
 
         public DataFlowProcess(
             IFakeRepository fakeRepository,
@@ -34,31 +34,35 @@ namespace DataFlow.Example.Features
                 MaxDegreeOfParallelism = DataflowBlockOptions.Unbounded
             };
 
-            _dateflowLinkOptions = new DataflowLinkOptions() { PropagateCompletion = true };
+            _dataflowLinkOptions = new DataflowLinkOptions() { PropagateCompletion = true };
         }
 
         public async IAsyncEnumerable<string> ProcessAsync(int amount, [EnumeratorCancellation] CancellationToken cancellationToken)
         {
-            var getDataBlock = new TransformManyBlock<int, int>((amount) => _fakeRepository.GetDataAsync(amount, default), _dataflowOptionsUnlimited);
-            var transformDataBlock = new TransformManyBlock<int, string>((amount) => _fakeTransformer.TransformDataAsync(amount, default), _dataflowOptionsLimited);
-            var saveDataBlock = new TransformBlock<string, string>((input) => _fakeRepository.SaveDataAsync(input, default), _dataflowOptionsUnlimited);
+            var getDataBlock = new TransformManyBlock<int, int>((amount) => _fakeRepository.GetDataAsync(amount, cancellationToken), _dataflowOptionsUnlimited);
+            var transformDataBlock = new TransformManyBlock<int, string>((amount) => _fakeTransformer.TransformDataAsync(amount, cancellationToken), _dataflowOptionsLimited);
+            var saveDataBlock = new TransformBlock<string, string>((input) => _fakeRepository.SaveDataAsync(input, cancellationToken), _dataflowOptionsUnlimited);
+            var broadcastBlock = new BroadcastBlock<string>(x => x);
             var returnBufferBlock = new BufferBlock<string>();
-            var postTelemetryBlock = new ActionBlock<string>((input) => _fakeTelemetry.PostTelemetry(input, default), _dataflowOptionsUnlimited);
+            var postTelemetryBlock = new ActionBlock<string>((input) => _fakeTelemetry.PostTelemetry(input, cancellationToken), _dataflowOptionsUnlimited);
 
-            getDataBlock.LinkTo(transformDataBlock, _dateflowLinkOptions);
-            transformDataBlock.LinkTo(saveDataBlock, _dateflowLinkOptions);
-            saveDataBlock.LinkTo(returnBufferBlock, _dateflowLinkOptions);
-            saveDataBlock.LinkTo(postTelemetryBlock, _dateflowLinkOptions);
+            getDataBlock.LinkTo(transformDataBlock, _dataflowLinkOptions);
+            transformDataBlock.LinkTo(saveDataBlock, _dataflowLinkOptions);
+            saveDataBlock.LinkTo(broadcastBlock, _dataflowLinkOptions);
+            broadcastBlock.LinkTo(returnBufferBlock, _dataflowLinkOptions);
+            broadcastBlock.LinkTo(postTelemetryBlock);
 
             await getDataBlock.SendAsync(amount, cancellationToken);
-
             getDataBlock.Complete();
 
             await saveDataBlock.Completion;
 
-            while (returnBufferBlock.TryReceive(out var item))
+            while (await returnBufferBlock.OutputAvailableAsync())
             {
-                yield return item;
+                while (returnBufferBlock.TryReceive(out var item))
+                {
+                    yield return item;
+                }
             }
         }
     }

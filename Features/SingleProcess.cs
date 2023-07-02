@@ -6,13 +6,16 @@ namespace DataFlow.Example.Features
     {
         private readonly IFakeRepository _fakeRepository;
         private readonly IFakeTransformer _fakeTransformer;
+        private readonly IFakeTelemetry _fakeTelemetry;
 
         public SingleProcess(
             IFakeRepository fakeRepository,
-            IFakeTransformer fakeTransformer)
+            IFakeTransformer fakeTransformer,
+            IFakeTelemetry fakeTelemetry)
         {
             _fakeRepository = fakeRepository;
             _fakeTransformer = fakeTransformer;
+            _fakeTelemetry = fakeTelemetry;
         }
 
         public async Task<IEnumerable<string>> ProcessAsync(int amount, CancellationToken cancellationToken)
@@ -24,7 +27,9 @@ namespace DataFlow.Example.Features
                 var transformedData = await _fakeTransformer.TransformDataAsync(item, cancellationToken);
                 foreach (var saveItem in transformedData)
                 {
-                    primaryKeys.Add(await _fakeRepository.SaveDataAsync(saveItem, cancellationToken));
+                    var result = await _fakeRepository.SaveDataAsync(saveItem, cancellationToken);
+                    primaryKeys.Add(result);
+                    await _fakeTelemetry.PostTelemetry(result, cancellationToken);
                 }
             }
 
