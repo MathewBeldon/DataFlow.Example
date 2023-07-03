@@ -42,7 +42,7 @@ namespace DataFlow.Example.Features
                             semaphore.Release();
                         }
                         var result = await Task.WhenAll(transformedData.Select(saveItem => _fakeRepository.SaveDataAsync(saveItem, cancellationToken)));
-                        _ = Task.Run(() => Task.WhenAll(result.Select(postItem => _fakeTelemetry.PostTelemetry(postItem, cancellationToken))));
+                        _ = Task.Run(() => Task.WhenAll(result.Select(postItem => _fakeTelemetry.PostTelemetryAsync(postItem, cancellationToken))));
                         return result.ToList();
                     }));
                 }

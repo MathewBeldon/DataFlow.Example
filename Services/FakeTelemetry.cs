@@ -2,7 +2,7 @@
 {
     public sealed class FakeTelemetry : IFakeTelemetry
     {
-        public async Task PostTelemetry(string input, CancellationToken cancellationToken)
+        public async Task PostTelemetryAsync(string input, CancellationToken cancellationToken)
         {
             await Task.Delay(50);
         }

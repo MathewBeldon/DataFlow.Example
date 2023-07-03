@@ -44,7 +44,7 @@ namespace DataFlow.Example.Features
             var saveDataBlock = new TransformBlock<string, string>((input) => _fakeRepository.SaveDataAsync(input, cancellationToken), _dataflowOptionsUnlimited);
             var broadcastBlock = new BroadcastBlock<string>(x => x);
             var returnBufferBlock = new BufferBlock<string>();
-            var postTelemetryBlock = new ActionBlock<string>((input) => _fakeTelemetry.PostTelemetry(input, cancellationToken), _dataflowOptionsUnlimited);
+            var postTelemetryBlock = new ActionBlock<string>((input) => _fakeTelemetry.PostTelemetryAsync(input, cancellationToken), _dataflowOptionsUnlimited);
 
             getDataBlock.LinkTo(transformDataBlock, _dataflowLinkOptions);
             transformDataBlock.LinkTo(saveDataBlock, _dataflowLinkOptions);

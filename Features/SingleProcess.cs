@@ -29,7 +29,7 @@ namespace DataFlow.Example.Features
                 {
                     var result = await _fakeRepository.SaveDataAsync(saveItem, cancellationToken);
                     primaryKeys.Add(result);
-                    await _fakeTelemetry.PostTelemetry(result, cancellationToken);
+                    _ = Task.Run(() => _fakeTelemetry.PostTelemetryAsync(result, cancellationToken));
                 }
             }
 

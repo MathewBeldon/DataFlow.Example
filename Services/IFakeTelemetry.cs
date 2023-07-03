@@ -2,6 +2,6 @@
 {
     public interface IFakeTelemetry
     {
-        Task PostTelemetry(string input, CancellationToken cancellationToken);
+        Task PostTelemetryAsync(string input, CancellationToken cancellationToken);
     }
 }
