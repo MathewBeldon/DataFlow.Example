@@ -1,4 +1,14 @@
-# DataFlow.Example
+                        █████▄  ▄▄▄    ▄███████▓▄▄▄       ███████     ▒█████  █     █░
+                        ██  ▀██▒████▄  ▒  ██▒ ▓▒████▄   ▓██   ▓██▒   ▒██▒  ██▓█░ █ ░█░
+                        ██   ██▒██  ▀█▄░ ▓██░ ▒▒██  ▀█▄ ▒████ ▒██░   ▒██░  ██▒█░ █ ░█ 
+                        ██  ▄█▓░██▄▄▄▄██ ▓██▓ ░░██▄▄▄▄██░▓█▒  ▒██░   ▒██   ██░█░ █ ░█ 
+                        █████▓▒ ██   ▓██▒▒██▒ ░ ██   ▓██░▒█░  ░██████░ ████▓▒░░██▒██▓ 
+                        ▓▒▒▓  ▒ ▒▒   ▓▒█░▒ ░░   ▒▒   ▓▒█░▒ ░  ░ ▒░▓  ░ ▒░▒░▒░░ ▓░▒ ▒  
+                         ░ ▒  ▒  ▒   ▒▒ ░  ░     ▒   ▒▒ ░░    ░ ░ ▒  ░ ░ ▒ ▒░  ▒ ░ ░  
+                         ░ ░  ░  ░   ▒   ░       ░   ▒   ░ ░    ░ ░  ░ ░ ░ ▒   ░   ░  
+                           ░         ░  ░            ░  ░         ░  ░   ░ ░     ░    
+                         ░                                                            
+
 
 *TLDR: the different methods are within the Features folder*
 
@@ -58,10 +68,10 @@ These results represent the performance of three different processing approaches
 ## Gantt Diagrams
 
 The following diagrams illustrate three different approaches to processing data: a sequential process, a semaphore process, and a dataflow process. Both semaphore and dataflow have a concurrency limit of 4 for CPU task (red) and no limit on I/O tasks. Each approach executes a set process in which it:
-1. retreives *n* amount of data (70ms simulated I/O)
-2. transforms that data into *n*\*2 items (30ms simulated CPU per req(*n*))
-3. saves those items and return an id (70ms simulated I/O per req(*n*\*2))
-4. post the id as telemetry data (50ms simulated I/O per req(*n*\*2)) (fire and forget for dataflow and semaphore)
+1. Retreives *n* amount of data (70ms simulated I/O)
+2. Transforms that data into *n*\*2 items (30ms simulated CPU per req(*n*))
+3. Saves those items and return an id (70ms simulated I/O per req(*n*\*2))
+4. Posts the id as telemetry data (50ms simulated I/O per req(*n*\*2)) (fire and forget)
 
 ```mermaid
     gantt
