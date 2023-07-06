@@ -2,16 +2,17 @@
 {
     public sealed class FakeRepository : IFakeRepository
     {
-        public async Task<IEnumerable<int>> GetDataAsync(int amount, CancellationToken cancellationToken)
+        public async Task<IEnumerable<int>> GetDataAsync(int amountOfItemsToReturn, CancellationToken cancellationToken)
         {
             await Task.Delay(100);
-            return Enumerable.Range(0, amount);
+            return Enumerable.Range(0, amountOfItemsToReturn);
         }
 
-        public async Task<string> SaveDataAsync(string item, CancellationToken cancellationToken)
+        public async Task<string> SaveDataAsync(string itemToSave, CancellationToken cancellationToken)
         {
             await Task.Delay(200);
-            return Guid.NewGuid().ToString();
+            var itemIdToReturn = Guid.NewGuid().ToString();
+            return itemIdToReturn;
         }
     }
 }

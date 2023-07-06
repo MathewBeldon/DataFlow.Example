@@ -2,6 +2,6 @@
 {
     public interface IFakeTransformer
     {
-        Task<IEnumerable<string>> TransformDataAsync(int number, CancellationToken cancellationToken);
+        Task<IEnumerable<string>> TransformDataAsync(int itemNumberToTransform, CancellationToken cancellationToken);
     }
 }

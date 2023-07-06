@@ -2,7 +2,7 @@
 {
     public interface IFakeRepository
     {
-        Task<IEnumerable<int>> GetDataAsync(int amount, CancellationToken cancellationToken);
-        Task<string> SaveDataAsync(string item, CancellationToken cancellationToken);
+        Task<IEnumerable<int>> GetDataAsync(int amountOfItemsToReturn, CancellationToken cancellationToken);
+        Task<string> SaveDataAsync(string itemToSave, CancellationToken cancellationToken);
     }
 }
