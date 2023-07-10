@@ -14,6 +14,49 @@
 
  There are various approaches to process data efficiently, each with its own trade-offs. In this demo, I have created three different strategies: TPL Dataflow, which utilizes a network of concurrently executing blocks; Semaphore-based control, which simply limits the number of tasks running in parallel; and Single-threaded processing, which executes tasks sequentially without any concurrency.
 
+
+This diagram represents the structure of the project. It shows the classes involved and their relationships.
+
+```mermaid
+classDiagram
+    class ParallelController{
+        +StartDataflow(int amount)
+        +StartSemaphore(int amount)
+        +StartSingle(int amount)
+    }
+    class DataFlowProcess{
+        +ProcessAsync(int amount)
+    }
+    class SemaphoreProcess{
+        +ProcessAsync(int amount)
+    }
+    class SingleProcess{
+        +ProcessAsync(int amount)
+    }
+    class FakeRepository{
+        +GetDataAsync(int amountOfItemsToReturn)
+        +SaveDataAsync(string itemToSave)
+    }
+    class FakeTransformer{
+        +TransformDataAsync(int itemNumberToTransform)
+    }
+    class FakeTelemetry{
+        +PostTelemetryAsync(string itemIdToPost)
+    }
+    ParallelController --> DataFlowProcess
+    ParallelController --> SemaphoreProcess
+    ParallelController --> SingleProcess
+    DataFlowProcess --> FakeRepository
+    DataFlowProcess --> FakeTransformer
+    DataFlowProcess --> FakeTelemetry
+    SemaphoreProcess --> FakeRepository
+    SemaphoreProcess --> FakeTransformer
+    SemaphoreProcess --> FakeTelemetry
+    SingleProcess --> FakeRepository
+    SingleProcess --> FakeTransformer
+    SingleProcess --> FakeTelemetry
+```
+
 ### Dataflow (TPL Dataflow)
 
 Task Parallel Library (TPL) Dataflow is ideal for building high-performance, data-driven applications. This approach constructs a processing pipeline using different blocks (like TransformManyBlock, TransformBlock, BroadcastBlock, etc.), each handling a specific type of processing. The blocks are linked, creating a complex data processing pipeline. Execution options are used to control concurrency levels, with the MaxDegreeOfParallelism property set to `Environment.ProcessorCount` for certain blocks (simulated CPU processes), allowing this many concurrent operations. Other blocks are configured to have an unbounded degree of parallelism (simulated I/O tasks). The model ensures that the completion status and exceptions are propagated through the pipeline.
@@ -39,6 +82,21 @@ stateDiagram-v2
         SaveDataAsync --> PostTelemetryAsync : sends (n*10) results to (fire and forget)
     }
 ```
+```mermaid
+sequenceDiagram
+    participant Controller as Controller
+    participant ProcessAsync as ProcessAsync
+    participant FakeRepository as FakeRepository
+    participant FakeTransformer as FakeTransformer
+    participant FakeTelemetry as FakeTelemetry
+    Controller->>ProcessAsync: ProcessAsync(int amount)
+    ProcessAsync->>FakeRepository: GetDataAsync(int amount)
+    ProcessAsync->>FakeTransformer: TransformDataAsync(int item)
+    ProcessAsync->>FakeRepository: SaveDataAsync(string item)
+    ProcessAsync->>Controller: Return Ids
+    ProcessAsync->>FakeTelemetry: PostTelemetryAsync(string itemId)
+```
+
 
 ## K6 Load Testing
 
@@ -372,3 +430,38 @@ The following diagrams illustrate three different approaches to processing data:
             PostTelemetry (14) : 350, 48ms
             PostTelemetry (13) : 349, 49ms
 ```
+
+# Dataflow predicate
+
+Not shown in this example is how to use predicate within dataflow, when setting up the pipeline it is possible to pass a predicate into the `LinkTo` method for example
+```csharp
+var predicate = new Predicate<int>(x => x % 2 == 0);
+getDataBlock.LinkTo(transformDataBlock, _dataflowLinkOptions, predicate);
+```
+would result in only even number getting sent to `transformDataBlock`, however, because this only processes even numbers there will be items left in the `getDataBlock` queue and the process will never complete.   
+
+
+To complete the process we'll need to empty the queue through either sending the odd numbers to be processed:
+```csharp
+var predicateForEven = new Predicate<int>(x => x % 2 == 0);
+var predicateForOdd = new Predicate<int>(x => x % 2 == 1);
+
+getDataBlock.LinkTo(transformEvenNumbersDataBlock, _dataflowLinkOptions, predicateForEven);
+getDataBlock.LinkTo(transformOddNumbersDataBlock, _dataflowLinkOptions, predicateForOdd);
+```
+Or alternatively we can send them to a null block:
+
+```csharp
+var predicate = new Predicate<int>(x => x % 2 == 0);
+getDataBlock.LinkTo(transformDataBlock, _dataflowLinkOptions, predicate);
+
+var nullTarget = new ActionBlock<int>(x => { });
+getDataBlock.LinkTo(nullTarget, _dataflowLinkOptions);
+```
+
+
+# Further reading
+
+[MSDN TPL Dataflow](https://learn.microsoft.com/en-us/dotnet/standard/parallel-programming/dataflow-task-parallel-library)
+
+[MSDN Semaphore](https://learn.microsoft.com/en-us/dotnet/api/system.threading.semaphore?view=net-7.0)
